@@ -1,5 +1,7 @@
 package com.kayo.helpdesk.service;
 
+import com.kayo.helpdesk.dto.ticket.TicketCreateRequestDTO;
+import com.kayo.helpdesk.dto.ticket.TicketResponseDTO;
 import com.kayo.helpdesk.entity.enums.Role;
 import com.kayo.helpdesk.entity.enums.TicketStatus;
 import com.kayo.helpdesk.entity.ticket.Ticket;
@@ -19,10 +21,10 @@ public class TicketService {
         this.ticketRepository = ticketRepository;
     }
 
-    public Ticket create(String title, String description, User user) {
+    public Ticket create(TicketCreateRequestDTO dto, User user) {
         Ticket ticket = new Ticket();
-        ticket.setTitle(title);
-        ticket.setDescription(description);
+        ticket.setTitle(dto.title());
+        ticket.setDescription(dto.description());
         ticket.setStatus(TicketStatus.OPEN);
         ticket.setUser(user);
         ticket.setCreatedAt(LocalDateTime.now());
@@ -30,10 +32,24 @@ public class TicketService {
         return ticketRepository.save(ticket);
     }
 
-    public List<Ticket> list(User user) {
-        if (user.getRole() == Role.USER){
-            return ticketRepository.findByUserId(user.getId());
-        }
-        return ticketRepository.findAll();
+    public List<TicketResponseDTO> list(User user) {
+        List<Ticket> tickets =
+         user.getRole() == Role.USER
+                ? ticketRepository.findByUserId(user.getId())
+                 :ticketRepository.findAll();
+        return tickets.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private TicketResponseDTO toResponse(Ticket ticket) {
+        return new TicketResponseDTO(
+                ticket.getId(),
+                ticket.getTitle(),
+                ticket.getDescription(),
+                ticket.getStatus().name(),
+                ticket.getUser().getUsername(),
+                ticket.getTech() != null ? ticket.getTech().getUsername() : null
+        );
     }
 }
